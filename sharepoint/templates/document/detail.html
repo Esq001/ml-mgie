@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}{{ doc.name }} - Engagement Workspace{% endblock %}
+{% block content %}
+<div class="container-fluid p-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{{ url_for('fileroom.index') }}">File Room</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('binder.view', binder_id=binder.id) }}">{{ binder.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('binder.view', binder_id=binder.id, folder_id=doc.folder_id) }}">{{ doc.folder.name }}</a></li>
+            <li class="breadcrumb-item active">{{ doc.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Left: Document Info -->
+        <div class="col-lg-8">
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-earmark doc-icon-{{ doc.file_type }}"></i>
+                        {{ doc.name }}
+                        {% if doc.status == 'deleted' %}
+                        <span class="badge bg-danger">Deleted</span>
+                        {% endif %}
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('document.download', doc_id=doc.id) }}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-download"></i> Download
+                        </a>
+                        {% if user_access_level in ('owner', 'editor') and doc.status == 'active' %}
+                            {% if doc.active_checkout %}
+                                {% if doc.active_checkout.checked_out_by == current_user.id or current_user.is_admin() %}
+                                <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#checkinModal">
+                                    <i class="bi bi-unlock"></i> Check In
+                                </button>
+                                {% endif %}
+                            {% else %}
+                                <form method="POST" action="{{ url_for('document.checkout', doc_id=doc.id) }}" class="d-inline">
+                                    <button class="btn btn-sm btn-warning">
+                                        <i class="bi bi-lock"></i> Check Out
+                                    </button>
+                                </form>
+                            {% endif %}
+                            <form method="POST" action="{{ url_for('document.delete', doc_id=doc.id) }}" class="d-inline"
+                                  onsubmit="return confirm('Move this document to recycle bin?');">
+                                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row text-muted small mb-3">
+                        <div class="col-sm-3"><strong>Type:</strong> {{ doc.file_type|upper }}</div>
+                        <div class="col-sm-3"><strong>Version:</strong> {{ doc.current_version }}</div>
+                        <div class="col-sm-3"><strong>Created:</strong> {{ doc.created_at.strftime('%m/%d/%Y') }}</div>
+                        <div class="col-sm-3"><strong>By:</strong> {{ doc.creator.full_name }}</div>
+                    </div>
+
+                    {% if doc.active_checkout %}
+                    <div class="alert alert-warning py-2">
+                        <i class="bi bi-lock-fill"></i>
+                        <strong>Checked out</strong> by {{ doc.active_checkout.user.full_name }}
+                        on {{ doc.active_checkout.checked_out_at.strftime('%m/%d/%Y %I:%M %p') }}
+                    </div>
+                    {% endif %}
+
+                    <!-- Sign-off Status -->
+                    <h6 class="mt-3 mb-2">Sign-offs</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="border rounded p-2 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Preparer:</strong>
+                                    {% if doc.preparer_signoff %}
+                                        <span class="text-success">
+                                            <i class="bi bi-check-circle-fill"></i>
+                                            {{ doc.preparer_signoff.signer.full_name }}
+                                            <br><small>{{ doc.preparer_signoff.signed_at.strftime('%m/%d/%Y %I:%M %p') }}</small>
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">Not signed</span>
+                                    {% endif %}
+                                </div>
+                                {% if doc.status == 'active' %}
+                                <div>
+                                    {% if doc.preparer_signoff %}
+                                        {% if doc.preparer_signoff.signed_by == current_user.id or current_user.is_admin() %}
+                                        <form method="POST" action="{{ url_for('workflow.clear_signoff', signoff_id=doc.preparer_signoff.id) }}">
+                                            <button class="btn btn-sm btn-outline-danger">Clear</button>
+                                        </form>
+                                        {% endif %}
+                                    {% else %}
+                                        <form method="POST" action="{{ url_for('workflow.signoff', doc_id=doc.id) }}">
+                                            <input type="hidden" name="type" value="preparer">
+                                            <button class="btn btn-sm btn-outline-success">Sign Off</button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="border rounded p-2 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Reviewer:</strong>
+                                    {% if doc.reviewer_signoff %}
+                                        <span class="text-primary">
+                                            <i class="bi bi-check-circle-fill"></i>
+                                            {{ doc.reviewer_signoff.signer.full_name }}
+                                            <br><small>{{ doc.reviewer_signoff.signed_at.strftime('%m/%d/%Y %I:%M %p') }}</small>
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">Not signed</span>
+                                    {% endif %}
+                                </div>
+                                {% if doc.status == 'active' %}
+                                <div>
+                                    {% if doc.reviewer_signoff %}
+                                        {% if doc.reviewer_signoff.signed_by == current_user.id or current_user.is_admin() %}
+                                        <form method="POST" action="{{ url_for('workflow.clear_signoff', signoff_id=doc.reviewer_signoff.id) }}">
+                                            <button class="btn btn-sm btn-outline-danger">Clear</button>
+                                        </form>
+                                        {% endif %}
+                                    {% else %}
+                                        <form method="POST" action="{{ url_for('workflow.signoff', doc_id=doc.id) }}">
+                                            <input type="hidden" name="type" value="reviewer">
+                                            <button class="btn btn-sm btn-outline-primary">Sign Off</button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Move Document -->
+                    {% if user_access_level in ('owner', 'editor') and doc.status == 'active' %}
+                    <h6 class="mt-3 mb-2">Move Document</h6>
+                    <form method="POST" action="{{ url_for('document.move', doc_id=doc.id) }}" class="d-flex gap-2 mb-3">
+                        <select name="folder_id" class="form-select form-select-sm" style="width: 250px;">
+                            {% for folder in binder.folders if not folder.parent_id %}
+                            <option value="{{ folder.id }}" {{ 'selected' if folder.id == doc.folder_id }}>
+                                {% if folder.index_number %}{{ folder.index_number }} - {% endif %}{{ folder.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <button class="btn btn-sm btn-outline-primary">Move</button>
+                    </form>
+                    {% endif %}
+
+                    <!-- Version History -->
+                    <h6 class="mt-3 mb-2">Version History</h6>
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr><th>Ver</th><th>Uploaded By</th><th>Date</th><th>Size</th><th>Comment</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            {% for ver in doc.versions %}
+                            <tr>
+                                <td>{{ ver.version_number }}</td>
+                                <td>{{ ver.uploader.full_name }}</td>
+                                <td>{{ ver.uploaded_at.strftime('%m/%d/%Y %I:%M %p') }}</td>
+                                <td>{{ "%.1f"|format(ver.file_size / 1024) }} KB</td>
+                                <td>{{ ver.comment }}</td>
+                                <td>
+                                    <a href="{{ url_for('document.download', doc_id=doc.id, version_id=ver.id) }}"
+                                       class="btn btn-sm btn-link"><i class="bi bi-download"></i></a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Notes Panel -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-sticky"></i> Notes</h6>
+                    <span class="badge bg-warning text-dark">{{ doc.unresolved_notes_count }} open</span>
+                </div>
+                <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                    {% if doc.status == 'active' %}
+                    <form method="POST" action="{{ url_for('workflow.add_note', doc_id=doc.id) }}" class="mb-3">
+                        <div class="input-group">
+                            <textarea name="content" class="form-control form-control-sm" rows="2"
+                                      placeholder="Add a note..." required></textarea>
+                            <button class="btn btn-sm btn-primary"><i class="bi bi-send"></i></button>
+                        </div>
+                    </form>
+                    {% endif %}
+
+                    {% for note in doc.notes %}
+                    <div class="note-item mb-2 p-2 border rounded {{ 'bg-light' if note.resolved }}">
+                        <div class="d-flex justify-content-between">
+                            <strong class="small">{{ note.creator.full_name }}</strong>
+                            <small class="text-muted">{{ note.created_at.strftime('%m/%d/%Y %I:%M %p') }}</small>
+                        </div>
+                        <p class="mb-1 small {{ 'text-decoration-line-through text-muted' if note.resolved }}">{{ note.content }}</p>
+                        {% if note.resolved %}
+                            <small class="text-success"><i class="bi bi-check"></i> Resolved by {{ note.resolver.full_name }}
+                            on {{ note.resolved_at.strftime('%m/%d/%Y') }}</small>
+                        {% else %}
+                            <form method="POST" action="{{ url_for('workflow.resolve_note', note_id=note.id) }}">
+                                <button class="btn btn-sm btn-outline-success py-0">Resolve</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted small text-center">No notes yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Check-in Modal -->
+<div class="modal fade" id="checkinModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('document.checkin', doc_id=doc.id) }}" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h5 class="modal-title">Check In Document</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">Upload a new version or check in without changes.</p>
+                    <div class="mb-3">
+                        <label class="form-label">New Version (optional)</label>
+                        <input type="file" name="file" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Comment</label>
+                        <input type="text" name="comment" class="form-control" placeholder="What changed?">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Check In</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

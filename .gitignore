@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.pyo
+sharepoint/instance/
+sharepoint/uploads/
+.env
+*.db

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}File Room - Engagement Workspace{% endblock %}
+{% block content %}
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-0"><i class="bi bi-folder2-open"></i> File Room</h3>
+            <small class="text-muted">Manage engagement binders</small>
+        </div>
+        <a href="{{ url_for('binder.create') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> New Binder
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <form method="GET" class="d-flex gap-3 align-items-center">
+                <label class="form-label mb-0 fw-bold">Filter:</label>
+                <select name="status" class="form-select form-select-sm" style="width: 150px;" onchange="this.form.submit()">
+                    <option value="active" {{ 'selected' if status_filter == 'active' }}>Active</option>
+                    <option value="archived" {{ 'selected' if status_filter == 'archived' }}>Archived</option>
+                    <option value="template" {{ 'selected' if status_filter == 'template' }}>Templates</option>
+                    <option value="" {{ 'selected' if not status_filter }}>All</option>
+                </select>
+                <select name="type" class="form-select form-select-sm" style="width: 150px;" onchange="this.form.submit()">
+                    <option value="">All Types</option>
+                    <option value="audit" {{ 'selected' if type_filter == 'audit' }}>Audit</option>
+                    <option value="tax" {{ 'selected' if type_filter == 'tax' }}>Tax</option>
+                    <option value="review" {{ 'selected' if type_filter == 'review' }}>Review</option>
+                    <option value="compilation" {{ 'selected' if type_filter == 'compilation' }}>Compilation</option>
+                    <option value="other" {{ 'selected' if type_filter == 'other' }}>Other</option>
+                </select>
+            </form>
+        </div>
+    </div>
+
+    {% if binders %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle engagement-table">
+            <thead>
+                <tr>
+                    <th>Binder Name</th>
+                    <th>Client</th>
+                    <th>Type</th>
+                    <th>Period End</th>
+                    <th>Status</th>
+                    <th>Created By</th>
+                    <th>Last Updated</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for binder in binders %}
+                <tr class="cursor-pointer" onclick="window.location='{{ url_for('binder.view', binder_id=binder.id) }}'">
+                    <td>
+                        <i class="bi bi-journal-bookmark-fill text-primary"></i>
+                        <strong>{{ binder.name }}</strong>
+                    </td>
+                    <td>{{ binder.client_name }}</td>
+                    <td>
+                        <span class="badge bg-type-{{ binder.engagement_type }}">
+                            {{ binder.engagement_type|title }}
+                        </span>
+                    </td>
+                    <td>{{ binder.period_end_date.strftime('%m/%d/%Y') if binder.period_end_date else '-' }}</td>
+                    <td>
+                        <span class="badge bg-status-{{ binder.status }}">{{ binder.status|title }}</span>
+                    </td>
+                    <td>{{ binder.creator.full_name }}</td>
+                    <td>{{ binder.updated_at.strftime('%m/%d/%Y %I:%M %p') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-folder2-open" style="font-size: 3rem;"></i>
+        <p class="mt-2">No binders found. Create your first engagement binder to get started.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+{% block statusbar %}{{ binders|length }} binder(s) displayed{% endblock %}
