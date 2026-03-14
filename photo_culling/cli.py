@@ -4,6 +4,7 @@ import argparse
 import sys
 
 from .culler import cull_photos
+from .icloud import find_icloud_photos_dir, list_icloud_sources
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -13,7 +14,19 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         "source_dir",
-        help="Directory containing photos to cull.",
+        nargs="?",
+        default=None,
+        help="Directory containing photos to cull (omit when using --icloud).",
+    )
+    parser.add_argument(
+        "--icloud",
+        action="store_true",
+        help="Auto-detect iCloud Photos sync folder and use it as source.",
+    )
+    parser.add_argument(
+        "--list-sources",
+        action="store_true",
+        help="List detected iCloud photo sources and exit.",
     )
     parser.add_argument(
         "--keep-threshold",
@@ -57,9 +70,38 @@ def main(argv: list[str] | None = None) -> None:
 
     args = parser.parse_args(argv)
 
+    # --list-sources: show detected iCloud directories and exit
+    if args.list_sources:
+        sources = list_icloud_sources()
+        if not sources:
+            print("No iCloud Photos folders detected.")
+            print(f"Tip: set the ICLOUD_PHOTOS_DIR environment variable to your sync path.")
+        else:
+            print("Detected iCloud Photos sources:")
+            for src in sources:
+                print(f"  {src['label']}: {src['path']}")
+        return
+
+    # Resolve source directory
+    source_dir = args.source_dir
+    if args.icloud:
+        icloud_dir = find_icloud_photos_dir()
+        if icloud_dir is None:
+            print(
+                "Error: no iCloud Photos folder found.\n"
+                "Set the ICLOUD_PHOTOS_DIR environment variable to your sync path,\n"
+                "or use --list-sources to see detected locations.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        source_dir = str(icloud_dir)
+        print(f"Using iCloud Photos folder: {source_dir}")
+    elif source_dir is None:
+        parser.error("source_dir is required (or use --icloud)")
+
     try:
         report = cull_photos(
-            args.source_dir,
+            source_dir,
             keep_threshold=args.keep_threshold,
             reject_threshold=args.reject_threshold,
             similarity_threshold=args.similarity_threshold,
