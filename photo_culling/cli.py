@@ -4,7 +4,13 @@ import argparse
 import sys
 
 from .culler import cull_photos
-from .icloud import find_icloud_photos_dir, list_icloud_sources
+from .icloud import (
+    find_icloud_photos_dir,
+    list_icloud_sources,
+    icloud_login,
+    download_icloud_photos,
+    list_icloud_albums,
+)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -27,6 +33,38 @@ def main(argv: list[str] | None = None) -> None:
         "--list-sources",
         action="store_true",
         help="List detected iCloud photo sources and exit.",
+    )
+    parser.add_argument(
+        "--icloud-download",
+        action="store_true",
+        help="Log in to iCloud and download photos directly from your account.",
+    )
+    parser.add_argument(
+        "--apple-id",
+        default=None,
+        help="Apple ID for iCloud login (or set ICLOUD_APPLE_ID env var).",
+    )
+    parser.add_argument(
+        "--album",
+        default=None,
+        help="iCloud album to download from (default: All Photos).",
+    )
+    parser.add_argument(
+        "--list-albums",
+        action="store_true",
+        help="Log in to iCloud and list available photo albums, then exit.",
+    )
+    parser.add_argument(
+        "--download-limit",
+        type=int,
+        default=None,
+        help="Maximum number of photos to download from iCloud.",
+    )
+    parser.add_argument(
+        "--recent-days",
+        type=int,
+        default=None,
+        help="Only download photos from the last N days.",
     )
     parser.add_argument(
         "--keep-threshold",
@@ -81,6 +119,29 @@ def main(argv: list[str] | None = None) -> None:
             for src in sources:
                 print(f"  {src['label']}: {src['path']}")
         return
+
+    # --list-albums: log in and show albums
+    if args.list_albums:
+        api = icloud_login(apple_id=args.apple_id)
+        albums = list_icloud_albums(api)
+        print("iCloud Photo albums:")
+        for name in albums:
+            print(f"  {name}")
+        return
+
+    # --icloud-download: pull photos from iCloud API, then cull them
+    if args.icloud_download:
+        api = icloud_login(apple_id=args.apple_id)
+        dest = args.output_dir or args.source_dir
+        download_dir = download_icloud_photos(
+            api,
+            dest_dir=dest,
+            album=args.album,
+            limit=args.download_limit,
+            recent_days=args.recent_days,
+        )
+        # Use the download directory as the source for culling
+        args.source_dir = str(download_dir)
 
     # Resolve source directory
     source_dir = args.source_dir

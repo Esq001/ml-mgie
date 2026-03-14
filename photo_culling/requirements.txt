@@ -4,3 +4,6 @@ scipy>=1.10
 # Optional: for CLIP-based semantic similarity
 # torch>=2.0
 # transformers>=4.30
+# Optional: for direct iCloud Photos download
+# pyicloud>=1.0.0
+# keyring>=24.0
