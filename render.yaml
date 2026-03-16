@@ -9,6 +9,7 @@ services:
     name: sharepoint-doc-repo
     runtime: python
     plan: free
+    rootDir: sharepoint
     buildCommand: chmod +x build.sh && ./build.sh
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
