@@ -17,13 +17,40 @@ from .constants import FORM_DEFINITIONS
 logger = logging.getLogger(__name__)
 
 
+def parse_k1_multi(text: str, source_file: str = "",
+                   extraction_method: str = "") -> list:
+    """
+    Parse text that may contain multiple K-1 forms and return a list of K1Data.
+
+    Splits the text at K-1 form boundaries, then parses each section.
+    If only one form is found, returns a single-element list.
+
+    Args:
+        text: Full text extracted from the PDF (may contain multiple K-1s).
+        source_file: Original PDF filename for reference.
+        extraction_method: "native" or "ocr".
+
+    Returns:
+        List of K1Data objects, one per K-1 form found.
+    """
+    sections = _split_k1_sections(text)
+
+    results = []
+    for i, section in enumerate(sections):
+        label = source_file if len(sections) == 1 else f"{source_file} [K-1 #{i + 1}]"
+        k1 = parse_k1(section, source_file=label, extraction_method=extraction_method)
+        results.append(k1)
+
+    return results
+
+
 def parse_k1(text: str, source_file: str = "",
              extraction_method: str = "") -> K1Data:
     """
-    Parse OCR/extracted text from a K-1 form and return structured data.
+    Parse OCR/extracted text from a single K-1 form and return structured data.
 
     Args:
-        text: Full text extracted from the PDF.
+        text: Text for a single K-1 form.
         source_file: Original PDF filename for reference.
         extraction_method: "native" or "ocr".
 
@@ -59,6 +86,55 @@ def parse_k1(text: str, source_file: str = "",
         confidence=confidence,
         warnings=warnings,
     )
+
+
+# =============================================================================
+# Multi-K1 Splitting
+# =============================================================================
+
+# Patterns that indicate the start of a new K-1 form
+_K1_BOUNDARY_PATTERN = re.compile(
+    r"(?:schedule\s+k[\-\s]*1|"
+    r"partner(?:'?s)?\s+share\s+of\s+(?:income|current)|"
+    r"shareholder(?:'?s)?\s+share\s+of\s+(?:income|current)|"
+    r"beneficiary(?:'?s)?\s+share\s+of\s+(?:income|current))",
+    re.IGNORECASE
+)
+
+
+def _split_k1_sections(text: str) -> list:
+    """
+    Split text containing multiple K-1 forms into individual sections.
+
+    Looks for repeated "Schedule K-1" or similar headers as boundaries.
+    Returns at least one section (the full text if no split points found).
+    """
+    # Find all boundary match positions
+    matches = list(_K1_BOUNDARY_PATTERN.finditer(text))
+
+    if len(matches) <= 1:
+        # Only one or no K-1 header found - treat as single form
+        return [text]
+
+    # Deduplicate: sometimes "Schedule K-1" and "Partner's Share of Income"
+    # appear close together for the same form. Merge matches within 200 chars.
+    split_positions = [matches[0].start()]
+    for m in matches[1:]:
+        if m.start() - split_positions[-1] > 200:
+            split_positions.append(m.start())
+
+    if len(split_positions) <= 1:
+        return [text]
+
+    # Split text at boundary positions
+    sections = []
+    for i, pos in enumerate(split_positions):
+        end = split_positions[i + 1] if i + 1 < len(split_positions) else len(text)
+        section = text[pos:end].strip()
+        if len(section) > 50:  # Skip tiny fragments
+            sections.append(section)
+
+    return sections if sections else [text]
 
 
 # =============================================================================

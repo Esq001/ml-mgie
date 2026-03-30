@@ -17,7 +17,7 @@ from tkinter import (
 from tkinter import ttk
 
 from .ocr_engine import extract_text, check_tesseract_available, get_tesseract_path_hint
-from .k1_parser import parse_k1
+from .k1_parser import parse_k1_multi
 from .excel_writer import write_excel
 from .models import K1Data
 
@@ -263,24 +263,33 @@ class K1ExtractorApp:
 
             try:
                 text, method = extract_text(pdf_path)
-                k1_data = parse_k1(text, source_file=filename, extraction_method=method)
-                results.append(k1_data)
+                k1_list = parse_k1_multi(text, source_file=filename, extraction_method=method)
 
                 method_str = "native text" if method == "native" else "OCR"
-                confidence_icon = {
-                    "high": "[OK]", "medium": "[WARN]", "low": "[LOW]"
-                }.get(k1_data.confidence, "?")
 
-                self._log(
-                    f"{confidence_icon} {filename} - "
-                    f"Form {k1_data.form_type} detected via {method_str}, "
-                    f"confidence: {k1_data.confidence}, "
-                    f"{len(k1_data.boxes)} boxes extracted"
-                )
+                if len(k1_list) > 1:
+                    self._log(
+                        f"[MULTI] {filename} - "
+                        f"Found {len(k1_list)} K-1 forms in this file via {method_str}"
+                    )
 
-                if k1_data.warnings:
-                    for warning in k1_data.warnings:
-                        self._log(f"  Warning: {warning}")
+                for k1_data in k1_list:
+                    results.append(k1_data)
+
+                    confidence_icon = {
+                        "high": "[OK]", "medium": "[WARN]", "low": "[LOW]"
+                    }.get(k1_data.confidence, "?")
+
+                    self._log(
+                        f"  {confidence_icon} {k1_data.source_file} - "
+                        f"Form {k1_data.form_type}, "
+                        f"confidence: {k1_data.confidence}, "
+                        f"{len(k1_data.boxes)} boxes extracted"
+                    )
+
+                    if k1_data.warnings:
+                        for warning in k1_data.warnings:
+                            self._log(f"    Warning: {warning}")
 
             except Exception as e:
                 self._log(f"[ERROR] {filename} - {e}")

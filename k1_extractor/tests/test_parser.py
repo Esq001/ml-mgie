@@ -12,11 +12,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from k1_extractor.k1_parser import (
     parse_k1,
+    parse_k1_multi,
     clean_currency,
     _detect_form_type,
     _extract_entity_info,
     _extract_recipient_info,
     _extract_boxes,
+    _split_k1_sections,
 )
 
 
@@ -316,6 +318,118 @@ class TestK1DataModel(unittest.TestCase):
         k1 = K1Data(source_file="test.pdf", form_type="1065",
                      boxes={"1": "(5000)"})
         self.assertEqual(k1.box_value_as_float("1"), -5000.0)
+
+
+class TestSplitK1Sections(unittest.TestCase):
+    """Test splitting multi-K1 text into individual sections."""
+
+    def test_single_form_returns_one_section(self):
+        text = """
+        Schedule K-1 (Form 1065)
+        Partner's Share of Income
+        Partnership's name: Test LP
+        1 Ordinary business income $10,000
+        """
+        sections = _split_k1_sections(text)
+        self.assertEqual(len(sections), 1)
+
+    def test_two_forms_returns_two_sections(self):
+        form1 = """
+        Schedule K-1 (Form 1065)
+        Partner's Share of Current Year Income
+        Partnership's name: Test LP
+        Partner's name: John Smith
+        1 Ordinary business income $10,000
+        """
+        form2 = """
+        Schedule K-1 (Form 1065)
+        Partner's Share of Current Year Income
+        Partnership's name: Test LP
+        Partner's name: Jane Doe
+        1 Ordinary business income $20,000
+        """
+        text = form1 + "\n" + form2
+        sections = _split_k1_sections(text)
+        self.assertEqual(len(sections), 2)
+        self.assertIn("John Smith", sections[0])
+        self.assertIn("Jane Doe", sections[1])
+
+    def test_nearby_headers_not_split(self):
+        text = """
+        Schedule K-1 (Form 1065)
+        Partner's Share of Current Year Income
+        Partnership's name: Test LP
+        1 Ordinary business income $10,000
+        """
+        sections = _split_k1_sections(text)
+        # "Schedule K-1" and "Partner's Share" are close together = same form
+        self.assertEqual(len(sections), 1)
+
+    def test_three_forms(self):
+        forms = []
+        for name in ["Alice", "Bob", "Charlie"]:
+            forms.append(f"""
+            Schedule K-1 (Form 1065)
+            Partner's Share of Current Year Income
+            Partnership's name: Test LP
+            Partner's name: {name}
+            1 Ordinary business income $10,000
+            """)
+        text = "\n".join(forms)
+        sections = _split_k1_sections(text)
+        self.assertEqual(len(sections), 3)
+
+
+class TestParseK1Multi(unittest.TestCase):
+    """Test multi-K1 parsing from a single document."""
+
+    def test_multi_k1_returns_multiple_results(self):
+        form1 = """
+        Schedule K-1 (Form 1065)
+        Partner's Share of Current Year Income
+        Partnership's name: Acme LP
+        Partnership's EIN: 12-3456789
+        For calendar year 2024
+        Partner's name: John Smith
+        Partner's identifying number: 111-22-3333
+        General partner
+        1 Ordinary business income (loss) $50,000
+        5 Interest income $1,000
+        """
+        form2 = """
+        Schedule K-1 (Form 1065)
+        Partner's Share of Current Year Income
+        Partnership's name: Acme LP
+        Partnership's EIN: 12-3456789
+        For calendar year 2024
+        Partner's name: Jane Doe
+        Partner's identifying number: 444-55-6666
+        Limited partner
+        1 Ordinary business income (loss) $25,000
+        5 Interest income $500
+        """
+        text = form1 + "\n" + form2
+        results = parse_k1_multi(text, "multi_k1.pdf", "native")
+
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0].source_file, "multi_k1.pdf [K-1 #1]")
+        self.assertEqual(results[1].source_file, "multi_k1.pdf [K-1 #2]")
+        self.assertEqual(results[0].recipient_name, "John Smith")
+        self.assertEqual(results[1].recipient_name, "Jane Doe")
+        self.assertEqual(results[0].boxes.get("1"), "50000")
+        self.assertEqual(results[1].boxes.get("1"), "25000")
+
+    def test_single_k1_returns_one_result(self):
+        text = """
+        Schedule K-1 (Form 1065)
+        Partner's Share of Current Year Income
+        Partnership's name: Solo LP
+        Partner's name: Only Partner
+        1 Ordinary business income (loss) $10,000
+        """
+        results = parse_k1_multi(text, "single.pdf", "native")
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].source_file, "single.pdf")
 
 
 if __name__ == "__main__":
