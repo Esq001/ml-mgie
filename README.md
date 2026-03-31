@@ -84,3 +84,11 @@ demo.ipynb
 
 ## Acknowledgement
 + [LLaVA](https://github.com/haotian-liu/LLaVA/tree/7ace501183c4bdec6052ec1a30039cdc3242a67c): the codebase we built upon
+
+## Additional Utility: Windows K-1 Extractor
+
+If you need a simple Windows desktop tool to read scanned Schedule K-1 PDFs and export to Excel, see:
+
+- [`k1_windows_app/`](k1_windows_app)
+
+It includes a Tkinter app with OCR (Tesseract + Poppler) and `.xlsx` export.
