@@ -1,0 +1,10 @@
+title = "TaxPortal1040 gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+paths = [
+  "packages/calc/coverage/",
+  "apps/*/dist/",
+]

@@ -1,0 +1,77 @@
+name: taxportal-ci
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "taxportal/**"
+      - ".github/workflows/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "taxportal/**"
+      - ".github/workflows/**"
+
+permissions:
+  contents: read
+  security-events: write
+
+defaults:
+  run:
+    working-directory: taxportal
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  calc:
+    name: calc package (typecheck + tests + coverage)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.0
+      - name: Install calc deps
+        run: npm install --no-audit --no-fund
+        working-directory: taxportal/packages/calc
+      - name: Typecheck
+        run: npx tsc -p tsconfig.json --noEmit
+        working-directory: taxportal/packages/calc
+      - name: Unit tests with coverage
+        run: npx vitest run --coverage
+        working-directory: taxportal/packages/calc
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: calc-coverage
+          path: taxportal/packages/calc/coverage
+
+  semgrep:
+    name: SAST (semgrep)
+    runs-on: ubuntu-latest
+    container: returntocorp/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      - run: semgrep ci --config=p/default --error
+        working-directory: taxportal
+
+  tfsec:
+    name: IaC scan (tfsec)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: taxportal/infra/terraform
+
+  gitleaks:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_CONFIG: taxportal/.gitleaks.toml

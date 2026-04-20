@@ -1,0 +1,29 @@
+{
+  "name": "taxportal1040",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.11.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:coverage": "turbo run test:coverage",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json,yaml,yml}\""
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "prettier": "^3.3.2",
+    "turbo": "^2.0.6",
+    "typescript": "^5.5.3"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

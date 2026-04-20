@@ -1,0 +1,12 @@
+{
+  "name": "@taxportal/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "echo 'web build lands in phase 2'",
+    "dev": "echo 'next dev lands in phase 2'",
+    "lint": "echo 'web lint lands in phase 2'",
+    "typecheck": "echo 'web typecheck lands in phase 2'",
+    "test": "echo 'web tests land in phase 2'"
+  }
+}

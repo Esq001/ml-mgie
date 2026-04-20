@@ -1,0 +1,672 @@
+// TaxPortal1040 Prisma schema
+//
+// Multi-tenant schema with tenant_id on every business table and
+// PostgreSQL row-level security (RLS) policies enforced in a
+// migration (see prisma/migrations/…_rls/migration.sql).
+//
+// Conventions:
+//   - Soft deletes via deletedAt timestamps.
+//   - created_at / updated_at / created_by / updated_by on every row.
+//   - Money stored as BigInt cents to avoid floating point.
+//   - Enums mirror spec document classifications.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["views", "relationJoins"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------------
+// Tenancy
+// ------------------------------------------------------------------
+
+model Firm {
+  id              String     @id @default(uuid())
+  name            String
+  efin            String?    @unique
+  etin            String?    @unique
+  wispDocumentUrl String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  createdBy       String?
+  updatedBy       String?
+  deletedAt       DateTime?
+
+  users           FirmUser[]
+  clients         Client[]
+  engagements     Engagement[]
+  documentUploads DocumentUpload[]
+  auditLogs       AuditLog[]
+  messages        Message[]
+  aiInteractions  AiInteraction[]
+
+  @@map("firms")
+}
+
+enum FirmRole {
+  ADMIN
+  PREPARER
+  REVIEWER
+  CLIENT
+}
+
+enum MfaStatus {
+  NONE
+  TOTP
+  WEBAUTHN
+  TOTP_AND_WEBAUTHN
+}
+
+model FirmUser {
+  id              String    @id @default(uuid())
+  firmId          String
+  firm            Firm      @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  email           String
+  hashedPassword  String?
+  role            FirmRole
+  mfaStatus       MfaStatus @default(NONE)
+  lastLoginAt     DateTime?
+  permissions     Json      @default("[]")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdBy       String?
+  updatedBy       String?
+  deletedAt       DateTime?
+
+  engagementsAsPreparer  Engagement[] @relation("EngagementPreparer")
+  engagementsAsReviewer  Engagement[] @relation("EngagementReviewer")
+  reviewComments         ReviewComment[] @relation("ReviewCommentAuthor")
+  reviewCommentResolutions ReviewComment[] @relation("ReviewCommentResolver")
+  messagesSent           Message[]    @relation("MessageSender")
+  aiInteractions         AiInteraction[]
+
+  @@unique([firmId, email])
+  @@index([firmId])
+  @@map("firm_users")
+}
+
+// ------------------------------------------------------------------
+// Client and engagement
+// ------------------------------------------------------------------
+
+enum FilingStatusDb {
+  SINGLE
+  MFJ
+  MFS
+  HOH
+  QSS
+}
+
+enum EngagementStatus {
+  DRAFT
+  DOCUMENTS_REQUESTED
+  IN_PREPARATION
+  IN_REVIEW
+  AWAITING_SIGNATURE
+  READY_TO_FILE
+  FILED
+  ACCEPTED
+  REJECTED
+  CLOSED
+}
+
+model Client {
+  id          String   @id @default(uuid())
+  firmId      String
+  firm        Firm     @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  displayName String
+  primarySsnEncrypted  String?
+  spouseSsnEncrypted   String?
+  email       String?
+  phone       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  updatedBy   String?
+  deletedAt   DateTime?
+
+  engagements Engagement[]
+  messages    Message[]
+  taxpayerProfiles TaxpayerProfile[]
+
+  @@index([firmId])
+  @@map("clients")
+}
+
+model Engagement {
+  id           String           @id @default(uuid())
+  firmId       String
+  firm         Firm             @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  clientId     String
+  client       Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  taxYear      Int
+  preparerId   String?
+  preparer     FirmUser?        @relation("EngagementPreparer", fields: [preparerId], references: [id])
+  reviewerId   String?
+  reviewer     FirmUser?        @relation("EngagementReviewer", fields: [reviewerId], references: [id])
+  status       EngagementStatus @default(DRAFT)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  createdBy    String?
+  updatedBy    String?
+  deletedAt    DateTime?
+
+  returns         Return[]
+  documentUploads DocumentUpload[]
+  messages        Message[]
+  reviewPhases    ReviewPhase[]
+  reviewComments  ReviewComment[]
+  aiInteractions  AiInteraction[]
+
+  @@unique([firmId, clientId, taxYear])
+  @@index([firmId])
+  @@index([clientId])
+  @@map("engagements")
+}
+
+// ------------------------------------------------------------------
+// Taxpayer data
+// ------------------------------------------------------------------
+
+model TaxpayerProfile {
+  id             String   @id @default(uuid())
+  firmId         String
+  clientId       String
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  firstName      String
+  middleInitial  String?
+  lastName       String
+  dateOfBirth    DateTime?
+  occupation     String?
+  blind          Boolean  @default(false)
+  isSpouse       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+
+  @@index([firmId])
+  @@index([clientId])
+  @@map("taxpayer_profiles")
+}
+
+model Dependent {
+  id           String   @id @default(uuid())
+  firmId       String
+  engagementId String
+  engagement   Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  firstName    String
+  lastName     String
+  ssnEncrypted String?
+  relationship String
+  ctcEligible  Boolean  @default(false)
+  odcEligible  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdBy    String?
+  updatedBy    String?
+  deletedAt    DateTime?
+
+  @@index([engagementId])
+  @@map("dependents")
+}
+
+// ------------------------------------------------------------------
+// Document intake
+// ------------------------------------------------------------------
+
+enum DocumentKind {
+  W2
+  K1_1065
+  K1_1120S
+  K1_1041
+  INT_1099
+  DIV_1099
+  B_1099
+  R_1099
+  NEC_1099
+  MISC_1099
+  G_1099
+  K_1099
+  SA_1099
+  Q_1099
+  A_1095
+  B_1095
+  C_1095
+  SSA_1099
+  RRB_1099
+  M_1098
+  E_1098
+  T_1098
+  SA_5498
+  Q_5498
+  FBAR_STMT
+  BROKERAGE_STMT
+  CHARITABLE_RECEIPT
+  PRIOR_YEAR_RETURN
+  UNCLASSIFIED
+}
+
+enum UploadStatus {
+  PENDING_SCAN
+  QUARANTINED
+  OCR_IN_PROGRESS
+  CLASSIFIED
+  EXTRACTION_COMPLETE
+  NEEDS_REVIEW
+  ACCEPTED
+  REJECTED
+  DUPLICATE
+  CORRECTED
+}
+
+enum UploadSource {
+  CLIENT
+  PREPARER
+  IMPORT
+}
+
+model DocumentUpload {
+  id               String       @id @default(uuid())
+  firmId           String
+  firm             Firm         @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  engagementId     String
+  engagement       Engagement   @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  objectKey        String
+  sha256           String
+  fileName         String
+  mimeType         String
+  sizeBytes        Int
+  source           UploadSource @default(CLIENT)
+  kind             DocumentKind @default(UNCLASSIFIED)
+  status           UploadStatus @default(PENDING_SCAN)
+  ocrConfidence    Float?
+  duplicateOfId    String?
+  duplicateOf      DocumentUpload?  @relation("Duplicates", fields: [duplicateOfId], references: [id])
+  duplicates       DocumentUpload[] @relation("Duplicates")
+  clientAttestedAt DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  createdBy        String?
+  updatedBy        String?
+  deletedAt        DateTime?
+
+  extractedDocument ExtractedDocument?
+
+  @@index([engagementId])
+  @@index([firmId])
+  @@index([sha256])
+  @@map("document_uploads")
+}
+
+model ExtractedDocument {
+  id               String   @id @default(uuid())
+  firmId           String
+  uploadId         String   @unique
+  upload           DocumentUpload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  kind             DocumentKind
+  fields           Json
+  lowConfidenceFields Json  @default("[]")
+  fingerprint      String
+  correctedFromId  String?
+  correctedFrom    ExtractedDocument? @relation("Corrections", fields: [correctedFromId], references: [id])
+  corrections      ExtractedDocument[] @relation("Corrections")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  createdBy        String?
+  updatedBy        String?
+  deletedAt        DateTime?
+
+  @@index([firmId])
+  @@index([fingerprint])
+  @@map("extracted_documents")
+}
+
+// ------------------------------------------------------------------
+// Return, schedules, forms, line items
+// ------------------------------------------------------------------
+
+model Return {
+  id            String   @id @default(uuid())
+  firmId        String
+  engagementId  String
+  engagement    Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  taxYear       Int
+  filingStatus  FilingStatusDb
+  headerJson    Json     @default("{}")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdBy     String?
+  updatedBy     String?
+  deletedAt     DateTime?
+
+  lineItems        LineItem[]
+  efilePackages    EfilePackage[]
+  stateReturns     StateReturn[]
+  carryforwards    Carryforward[]
+  estimatedPayments EstimatedPayment[]
+
+  @@unique([engagementId, taxYear])
+  @@index([firmId])
+  @@map("returns")
+}
+
+model LineItem {
+  id           String   @id @default(uuid())
+  firmId       String
+  returnId     String
+  return       Return   @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  /** Dotted ref, e.g. "1040.L1a", "sched-C.L7". */
+  lineRef      String
+  /** Amount in cents, signed. */
+  valueCents   BigInt
+  /** Provenance JSON matching packages/calc Provenance shape. */
+  provenance   Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdBy    String?
+  updatedBy    String?
+  deletedAt    DateTime?
+
+  @@unique([returnId, lineRef])
+  @@index([firmId])
+  @@map("line_items")
+}
+
+model StateReturn {
+  id        String   @id @default(uuid())
+  firmId    String
+  returnId  String
+  return    Return   @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  stateCode String
+  formCode  String
+  dataJson  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
+  deletedAt DateTime?
+
+  @@index([firmId])
+  @@index([returnId])
+  @@map("state_returns")
+}
+
+model Carryforward {
+  id          String   @id @default(uuid())
+  firmId      String
+  returnId    String
+  return      Return   @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  /** e.g. "NOL", "CAP_LOSS", "AMT_CREDIT", "CHAR_DED", "PASSIVE_LOSS", "FORM_8606_BASIS". */
+  kind        String
+  amountCents BigInt
+  metaJson    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  updatedBy   String?
+  deletedAt   DateTime?
+
+  @@index([firmId])
+  @@index([returnId])
+  @@map("carryforwards")
+}
+
+model EstimatedPayment {
+  id          String   @id @default(uuid())
+  firmId      String
+  returnId    String
+  return      Return   @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  quarter     Int
+  dueDate     DateTime
+  amountCents BigInt
+  paidOn      DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  updatedBy   String?
+  deletedAt   DateTime?
+
+  @@index([firmId])
+  @@index([returnId])
+  @@map("estimated_payments")
+}
+
+// ------------------------------------------------------------------
+// Review
+// ------------------------------------------------------------------
+
+enum ReviewPhaseKind {
+  DOCUMENT_COMPLETENESS
+  INCOME_RECONCILIATION
+  DEDUCTIONS_AND_CREDITS
+  COMPLIANCE_AND_DIAGNOSTICS
+  FINAL_REVIEW
+}
+
+enum ReviewItemStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  BLOCKED
+  COMPLETE
+}
+
+enum ReviewCommentUrgency {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+model ReviewPhase {
+  id           String           @id @default(uuid())
+  firmId       String
+  engagementId String
+  engagement   Engagement       @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  kind         ReviewPhaseKind
+  status       ReviewItemStatus @default(NOT_STARTED)
+  checklistJson Json            @default("[]")
+  completedAt  DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  createdBy    String?
+  updatedBy    String?
+  deletedAt    DateTime?
+
+  @@unique([engagementId, kind])
+  @@index([firmId])
+  @@map("review_phases")
+}
+
+model ReviewComment {
+  id               String               @id @default(uuid())
+  firmId           String
+  engagementId     String
+  engagement       Engagement           @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  lineRef          String?
+  urgency          ReviewCommentUrgency @default(MEDIUM)
+  confidence       Int                  @default(100)
+  description      String
+  recommendedAction String?
+  assignedToId    String?
+  authorId         String?
+  author           FirmUser?            @relation("ReviewCommentAuthor", fields: [authorId], references: [id])
+  dueAt            DateTime?
+  resolvedAt       DateTime?
+  resolvedById     String?
+  resolvedBy       FirmUser?            @relation("ReviewCommentResolver", fields: [resolvedById], references: [id])
+  resolutionNote   String?
+  rolloverNextYear Boolean              @default(false)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  createdBy        String?
+  updatedBy        String?
+  deletedAt        DateTime?
+
+  @@index([firmId])
+  @@index([engagementId])
+  @@map("review_comments")
+}
+
+// ------------------------------------------------------------------
+// E-file
+// ------------------------------------------------------------------
+
+enum EfilePackageStatus {
+  DRAFT
+  VALIDATED
+  TRANSMITTED
+  ACCEPTED
+  REJECTED
+  DUPLICATE
+}
+
+model EfilePackage {
+  id              String             @id @default(uuid())
+  firmId          String
+  returnId        String
+  return          Return             @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  /** Formatted per IRS Submission ID rules (ETIN + YYYYDDD + 7-digit sequence). */
+  submissionId    String             @unique
+  xmlObjectKey    String?
+  status          EfilePackageStatus @default(DRAFT)
+  ackRawJson      Json?
+  ackCode         String?
+  ackRejectCodes  Json?
+  transmittedAt   DateTime?
+  acknowledgedAt  DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  createdBy       String?
+  updatedBy       String?
+  deletedAt       DateTime?
+
+  @@index([firmId])
+  @@index([returnId])
+  @@map("efile_packages")
+}
+
+// ------------------------------------------------------------------
+// Messaging
+// ------------------------------------------------------------------
+
+model MessageThread {
+  id           String   @id @default(uuid())
+  firmId       String
+  engagementId String
+  subject      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdBy    String?
+  updatedBy    String?
+  deletedAt    DateTime?
+  messages     Message[]
+
+  @@index([firmId])
+  @@index([engagementId])
+  @@map("message_threads")
+}
+
+model Message {
+  id           String   @id @default(uuid())
+  firmId       String
+  firm         Firm     @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  threadId     String
+  thread       MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  engagementId String
+  engagement   Engagement    @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  senderFirmUserId String?
+  sender       FirmUser?     @relation("MessageSender", fields: [senderFirmUserId], references: [id])
+  clientSenderId   String?
+  clientSender     Client?   @relation(fields: [clientSenderId], references: [id])
+  bodyEncrypted    String
+  attachmentsJson  Json      @default("[]")
+  readAt           DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  createdBy        String?
+  updatedBy        String?
+  deletedAt        DateTime?
+
+  @@index([firmId])
+  @@index([threadId])
+  @@map("messages")
+}
+
+// ------------------------------------------------------------------
+// AI
+// ------------------------------------------------------------------
+
+enum AiProvider {
+  OPENAI
+  ANTHROPIC
+}
+
+enum AiScope {
+  PREPARER_FULL
+  CLIENT_SCOPED
+  SYSTEM_RAG
+}
+
+model AiInteraction {
+  id           String     @id @default(uuid())
+  firmId       String
+  firm         Firm       @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  engagementId String?
+  engagement   Engagement? @relation(fields: [engagementId], references: [id])
+  userId       String?
+  user         FirmUser?   @relation(fields: [userId], references: [id])
+  provider     AiProvider
+  model        String
+  scope        AiScope
+  promptRedacted String
+  responseRedacted String
+  tokensIn     Int
+  tokensOut    Int
+  costCents    BigInt     @default(0)
+  toolCallsJson Json      @default("[]")
+  retentionFlag String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  createdBy    String?
+  updatedBy    String?
+  deletedAt    DateTime?
+
+  @@index([firmId])
+  @@index([engagementId])
+  @@map("ai_interactions")
+}
+
+// ------------------------------------------------------------------
+// Audit log (append-only, hash-chained)
+// ------------------------------------------------------------------
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  firmId         String
+  firm           Firm     @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  actorUserId    String?
+  actorClientId  String?
+  action         String
+  entity         String
+  entityId       String?
+  beforeJson     Json?
+  afterJson      Json?
+  ipAddress      String?
+  userAgent      String?
+  /** SHA-256 of the preceding audit log entry body; anchors the chain. */
+  previousHash   String?
+  /** SHA-256 of this entry's body. */
+  hash           String
+  createdAt      DateTime @default(now())
+
+  @@index([firmId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_log")
+}

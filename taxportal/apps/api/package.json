@@ -1,0 +1,22 @@
+{
+  "name": "@taxportal/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'eslint not yet configured'",
+    "test": "echo 'api tests land with integration phase'"
+  },
+  "dependencies": {
+    "@taxportal/calc": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.3",
+    "@types/node": "^20.12.12"
+  }
+}
