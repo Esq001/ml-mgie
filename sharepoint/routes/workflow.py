@@ -12,6 +12,12 @@ workflow_bp = Blueprint('workflow', __name__, url_prefix='/workflow')
 @login_required
 def signoff(doc_id):
     doc = Document.query.get_or_404(doc_id)
+    from models.binder import BinderAccess
+    access = BinderAccess.query.filter_by(binder_id=doc.binder_id, user_id=current_user.id).first()
+    if not current_user.is_admin() and not access:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('document.detail', doc_id=doc_id))
+
     sign_off_type = request.form.get('type')  # preparer or reviewer
 
     if sign_off_type not in ('preparer', 'reviewer'):

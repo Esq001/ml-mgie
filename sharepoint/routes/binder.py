@@ -89,9 +89,12 @@ def view(binder_id):
             .order_by(Document.name).all()
         selected_folder = None
     elif folder_id:
-        documents = Document.query.filter_by(folder_id=folder_id, status='active')\
-            .order_by(Document.name).all()
         selected_folder = Folder.query.get(folder_id)
+        if not selected_folder or selected_folder.binder_id != binder.id:
+            flash('Invalid folder.', 'danger')
+            return redirect(url_for('binder.view', binder_id=binder_id))
+        documents = Document.query.filter_by(folder_id=folder_id, binder_id=binder.id, status='active')\
+            .order_by(Document.name).all()
     else:
         documents = Document.query.filter_by(binder_id=binder.id, status='active')\
             .order_by(Document.name).all()

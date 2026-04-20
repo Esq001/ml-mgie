@@ -28,6 +28,11 @@ def upload():
         flash('Access denied.', 'danger')
         return redirect(url_for('binder.view', binder_id=binder_id))
 
+    folder = Folder.query.get_or_404(folder_id)
+    if folder.binder_id != binder_id:
+        flash('Invalid folder for this binder.', 'danger')
+        return redirect(url_for('binder.view', binder_id=binder_id))
+
     file = request.files.get('file')
     if not file or file.filename == '':
         flash('No file selected.', 'danger')
@@ -86,6 +91,11 @@ def detail(doc_id):
 @login_required
 def download(doc_id, version_id=None):
     doc = Document.query.get_or_404(doc_id)
+    binder = Binder.query.get_or_404(doc.binder_id)
+    access = BinderAccess.query.filter_by(binder_id=binder.id, user_id=current_user.id).first()
+    if not current_user.is_admin() and not access:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('fileroom.index'))
     if version_id:
         version = DocumentVersion.query.get_or_404(version_id)
     else:
