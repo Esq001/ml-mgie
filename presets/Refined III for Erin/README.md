@@ -5,6 +5,12 @@ Three Lightroom presets recreated in the spirit of the Refined Co. **Refined III
 based on publicly described characteristics of the pack — they aren't the originals
 and aren't affiliated with Refined Co.
 
+![Mockup: original vs. Refined III.1 / III.2 / III.3 across five sample photos](MOCKUP.png)
+
+> The mockup above is rendered by an in-repo simulator (`backtest/`) — directionally
+> accurate but not pixel-identical to Adobe Camera Raw. Final visual approval
+> happens in Lightroom.
+
 ## What's in the pack
 
 | Preset            | Look                                                                                              |
@@ -22,6 +28,11 @@ greens, and gentle film grain — the classic 400H signature.
 2. Open the **Presets** panel (left side), click the **+** icon → **Import Presets…**.
 3. Select all three `.xmp` files in this folder.
 4. They'll appear under a group named **Refined III for Erin**.
+
+> **If you see "Unable to import presets — All items were already imported":**
+> Lightroom dedupes by preset UUID. You imported an older version once, and
+> Lightroom is now ignoring the new file. Right-click each existing
+> `Refined III.x` preset → **Delete**, then import again.
 
 ## Install — Lightroom CC / Mobile (cloud / phone)
 
