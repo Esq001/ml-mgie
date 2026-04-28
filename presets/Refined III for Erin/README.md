@@ -29,6 +29,11 @@ greens, and gentle film grain — the classic 400H signature.
 3. Select all three `.xmp` files in this folder.
 4. They'll appear under a group named **Refined III for Erin**.
 
+> **If you see "Unable to import presets — All items were already imported":**
+> Lightroom dedupes by preset UUID. You imported an older version once, and
+> Lightroom is now ignoring the new file. Right-click each existing
+> `Refined III.x` preset → **Delete**, then import again.
+
 ## Install — Lightroom CC / Mobile (cloud / phone)
 
 1. On desktop Lightroom (cloud version), click the **Presets** panel → **…** → **Import Presets**.
