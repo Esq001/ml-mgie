@@ -22,6 +22,7 @@ OUT.mkdir(exist_ok=True)
 # Hand-picked photos that exercise the parts of the pack Erin will care about:
 #   sunset+person, lush foliage, warm tones, mixed greens.
 PHOTOS = [
+    ("Featured: dog in stroller", PRESET_DIR / "IMG_4601.jpeg"),
     ("Sunset portrait",  REPO / "_input" / "11.jpg"),
     ("Foliage path",     REPO / "_input" / "10.jpg"),
     ("Warm tones",       REPO / "_input" / "4.jpg"),
