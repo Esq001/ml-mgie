@@ -5,6 +5,12 @@ Three Lightroom presets recreated in the spirit of the Refined Co. **Refined III
 based on publicly described characteristics of the pack — they aren't the originals
 and aren't affiliated with Refined Co.
 
+![Mockup: original vs. Refined III.1 / III.2 / III.3 across five sample photos](MOCKUP.png)
+
+> The mockup above is rendered by an in-repo simulator (`backtest/`) — directionally
+> accurate but not pixel-identical to Adobe Camera Raw. Final visual approval
+> happens in Lightroom.
+
 ## What's in the pack
 
 | Preset            | Look                                                                                              |
