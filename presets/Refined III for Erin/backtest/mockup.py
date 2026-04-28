@@ -29,8 +29,8 @@ PHOTOS = [
     ("Cabin in pines",   REPO / "_input" / "3.jpg"),
     ("River + town",     REPO / "_input" / "9.jpg"),
 ]
-PRESETS = ["Refined III.1", "Refined III.2", "Refined III.3"]
-TILE = 360       # square tile size
+PRESETS = ["Refined Polish", "Refined III.1", "Refined III.2", "Refined III.3"]
+TILE = 320       # square tile size
 GAP = 10
 LABEL_H = 30
 HEADER_H = 36
