@@ -13,11 +13,17 @@ and aren't affiliated with Refined Co.
 
 ## What's in the pack
 
-| Preset            | Look                                                                                              |
-| ----------------- | ------------------------------------------------------------------------------------------------- |
-| **Refined III.1** | Deep filmy cyan greens, clean luminous **peach** skin tones with delicate pinks.                  |
-| **Refined III.2** | Deep filmy cyan greens, delicate cyan shadows, **warm luminous** skin tones and highlights.      |
-| **Refined III.3** | Warmer cyan greens, cyan shadows, warm skin tones with a splash of **cool pink** in highlights.   |
+| Preset                | Look                                                                                              |
+| --------------------- | ------------------------------------------------------------------------------------------------- |
+| **Refined Polish**    | Conservative correction pass. Stays 80–90% faithful to the original — minimal exposure/contrast bumps, no HSL shifts, no color grading, no grain. Use when you want a clean polished version, not a film look. |
+| **Refined III.1**     | Deep filmy cyan greens, clean luminous **peach** skin tones with delicate pinks.                  |
+| **Refined III.2**     | Deep filmy cyan greens, delicate cyan shadows, **warm luminous** skin tones and highlights.       |
+| **Refined III.3**     | Warmer cyan greens, cyan shadows, warm skin tones with a splash of **cool pink** in highlights.   |
+
+### When to use which
+
+- **Refined Polish** — start here for portraits, family photos, or anything where the goal is "this photo, cleaned up." No stylization. Safe baseline.
+- **Refined III.1 / .2 / .3** — when the goal is a Fuji 400H film look (cyan greens, lifted shadows, warm skin). Deliberately stylized; pick the one whose highlight tint and skin warmth fits the scene.
 
 All three lean on lifted blacks, soft highlight rolloff, muted yellows, cyan-shifted
 greens, and gentle film grain — the classic 400H signature.
