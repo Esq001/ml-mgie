@@ -1,0 +1,281 @@
+{
+  "meta": {
+    "name": "QQQ_600_By_Thursday_Decision_Framework",
+    "version": "1.0",
+    "created_date": "March 31, 2026",
+    "time_horizon": "Through Thursday EOD",
+    "instrument": "QQQ",
+    "primary_target": 600.0,
+    "spot_reference": 577.18,
+    "base_probability_target_hit": 0.07,
+    "notes": [
+      "Framework is path dependent, not target dependent.",
+      "Use price acceptance and momentum confirmation before adding size.",
+      "Short-dated options decay rapidly into Thursday."
+    ]
+  },
+  "decision_tree": {
+    "start_node": "open_assessment",
+    "nodes": [
+      {
+        "id": "open_assessment",
+        "type": "decision",
+        "question": "Is QQQ opening above prior close and holding early strength?",
+        "if_yes": "reclaim_580_582",
+        "if_no": "below_open_strength"
+      },
+      {
+        "id": "below_open_strength",
+        "type": "decision",
+        "question": "Where is QQQ trading?",
+        "branches": [
+          {
+            "condition": "price < 575",
+            "next": "bearish_drift"
+          },
+          {
+            "condition": "price >= 575 && price < 580",
+            "next": "neutral_grind"
+          }
+        ]
+      },
+      {
+        "id": "reclaim_580_582",
+        "type": "decision",
+        "question": "Does QQQ reclaim and hold above 580 to 582?",
+        "if_yes": "press_585",
+        "if_no": "constructive_but_incomplete"
+      },
+      {
+        "id": "press_585",
+        "type": "decision",
+        "question": "Is QQQ pressing 585 or higher by Wednesday afternoon?",
+        "if_yes": "breadth_check",
+        "if_no": "runner_only"
+      },
+      {
+        "id": "breadth_check",
+        "type": "decision",
+        "question": "Is there strong breadth, mega-cap leadership, and no reversal?",
+        "if_yes": "thursday_590_check",
+        "if_no": "stall_under_590_595"
+      },
+      {
+        "id": "thursday_590_check",
+        "type": "decision",
+        "question": "Is QQQ above 590 early Thursday?",
+        "if_yes": "live_600_target",
+        "if_no": "exit_most_short_dated_calls"
+      },
+      {
+        "id": "bearish_drift",
+        "type": "outcome",
+        "label": "Bearish drift",
+        "probability_600_by_thursday_eod": {
+          "low": 0.01,
+          "high": 0.03
+        },
+        "actions": [
+          "Reduce aggressive bullish exposure",
+          "Do not chase upside",
+          "Trim short-dated calls into bounces"
+        ]
+      },
+      {
+        "id": "neutral_grind",
+        "type": "outcome",
+        "label": "Neutral grind",
+        "probability_600_by_thursday_eod": {
+          "low": 0.03,
+          "high": 0.06
+        },
+        "actions": [
+          "Hold only small speculative upside",
+          "Require reclaim of 580 to stay constructive"
+        ]
+      },
+      {
+        "id": "constructive_but_incomplete",
+        "type": "outcome",
+        "label": "Constructive but incomplete",
+        "probability_600_by_thursday_eod": {
+          "low": 0.06,
+          "high": 0.10
+        },
+        "actions": [
+          "Do not add size yet",
+          "Consider selling part of short-dated upside into strength"
+        ]
+      },
+      {
+        "id": "runner_only",
+        "type": "outcome",
+        "label": "Momentum breakout not yet enough",
+        "probability_600_by_thursday_eod": {
+          "low": 0.10,
+          "high": 0.18
+        },
+        "actions": [
+          "Keep runners only",
+          "Harvest gains on part of position"
+        ]
+      },
+      {
+        "id": "stall_under_590_595",
+        "type": "outcome",
+        "label": "Likely stall under 590 to 595",
+        "probability_600_by_thursday_eod": {
+          "low": 0.10,
+          "high": 0.18
+        },
+        "actions": [
+          "Take profits aggressively",
+          "Avoid overstaying short-dated calls"
+        ]
+      },
+      {
+        "id": "exit_most_short_dated_calls",
+        "type": "outcome",
+        "label": "600 less likely without 590 early Thursday",
+        "probability_600_by_thursday_eod": {
+          "low": 0.05,
+          "high": 0.10
+        },
+        "actions": [
+          "Exit most short-dated calls",
+          "Only keep very small optionality if desired"
+        ]
+      },
+      {
+        "id": "live_600_target",
+        "type": "outcome",
+        "label": "600 becomes a live intraday target",
+        "probability_600_by_thursday_eod": {
+          "low": 0.20,
+          "high": 0.35
+        },
+        "actions": [
+          "Hold only a reduced runner",
+          "Sell into acceleration",
+          "Trail stops tightly"
+        ]
+      }
+    ]
+  },
+  "dashboard": {
+    "scenario_dashboard": [
+      {
+        "scenario": "Bearish drift",
+        "price_path": "Below 575",
+        "probability_600_by_thursday_eod": "1% to 3%",
+        "action": "Cut aggressive upside exposure"
+      },
+      {
+        "scenario": "Neutral grind",
+        "price_path": "575 to 579",
+        "probability_600_by_thursday_eod": "3% to 6%",
+        "action": "Hold only small speculative size"
+      },
+      {
+        "scenario": "Constructive",
+        "price_path": "580 to 584",
+        "probability_600_by_thursday_eod": "6% to 10%",
+        "action": "Stay constructive, but do not oversize"
+      },
+      {
+        "scenario": "Momentum breakout",
+        "price_path": "585 to 589",
+        "probability_600_by_thursday_eod": "10% to 18%",
+        "action": "Keep partial position, take some profits"
+      },
+      {
+        "scenario": "Squeeze regime",
+        "price_path": "590+ by Thursday morning",
+        "probability_600_by_thursday_eod": "20% to 35%",
+        "action": "Hold runners only, trail tightly"
+      }
+    ],
+    "trigger_dashboard": [
+      {
+        "trigger": "Losing 575",
+        "read": "Momentum failing",
+        "action": "De-risk fast"
+      },
+      {
+        "trigger": "Reclaiming 580",
+        "read": "Bullish but incomplete",
+        "action": "Hold or add only modestly"
+      },
+      {
+        "trigger": "Holding 582 to 585",
+        "read": "Real continuation",
+        "action": "Let winners work"
+      },
+      {
+        "trigger": "Breaking 590",
+        "read": "Squeeze path opens",
+        "action": "Keep runner only"
+      },
+      {
+        "trigger": "Failing after strong open",
+        "read": "Distribution risk",
+        "action": "Sell into strength, do not wait"
+      }
+    ],
+    "position_management_dashboard": [
+      {
+        "current_position": "Flat",
+        "best_action": "Wait for 580+ hold before getting aggressive"
+      },
+      {
+        "current_position": "Long shares",
+        "best_action": "Keep core, trim some into sharp upside"
+      },
+      {
+        "current_position": "Long short-dated calls",
+        "best_action": "Scale out on strength, do not let winners round-trip"
+      },
+      {
+        "current_position": "Overexposed to upside",
+        "best_action": "Reduce now unless QQQ is accepting above 582"
+      },
+      {
+        "current_position": "Looking for lotto upside",
+        "best_action": "Only use small size you can fully lose"
+      }
+    ]
+  },
+  "simple_rules": [
+    {
+      "rule": 1,
+      "condition": "price < 575",
+      "instruction": "Get defensive"
+    },
+    {
+      "rule": 2,
+      "condition": "price >= 580",
+      "instruction": "Stay open-minded"
+    },
+    {
+      "rule": 3,
+      "condition": "price >= 585",
+      "instruction": "Let a partial position run"
+    },
+    {
+      "rule": 4,
+      "condition": "price >= 590 on Thursday morning",
+      "instruction": "600 is live"
+    },
+    {
+      "rule": 5,
+      "condition": "sharp upside spike",
+      "instruction": "Sell into it"
+    }
+  ],
+  "risk_flags": [
+    "Gap reversals can invalidate early strength.",
+    "Time decay accelerates materially on Thursday for short-dated options.",
+    "A possible move is not the same as a probable move.",
+    "Do not confuse a tag of 600 with sustainable acceptance above 600."
+  ]
+}
