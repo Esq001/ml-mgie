@@ -1,0 +1,247 @@
+/* CCH Engagement-inspired theme */
+:root {
+    --primary-dark: #1a3a5c;
+    --primary: #2563a0;
+    --primary-light: #3b82c4;
+    --sidebar-bg: #f0f2f5;
+    --border-color: #d1d5db;
+    --hover-bg: #e8edf2;
+    --text-muted: #6b7280;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 0.9rem;
+    background-color: #f5f6f8;
+    padding-bottom: 30px;
+}
+
+/* Override Bootstrap primary */
+.bg-primary-dark {
+    background-color: var(--primary-dark) !important;
+}
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+.btn-outline-primary {
+    color: var(--primary);
+    border-color: var(--primary);
+}
+.btn-outline-primary:hover {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+.text-primary {
+    color: var(--primary) !important;
+}
+
+/* Navbar */
+.navbar {
+    padding: 0.4rem 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+.navbar-brand {
+    font-size: 1.05rem;
+}
+.nav-link {
+    font-size: 0.85rem;
+    padding: 0.25rem 0.5rem !important;
+}
+
+/* Status Bar */
+.status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--primary-dark);
+    color: #ccc;
+    font-size: 0.75rem;
+    padding: 3px 16px;
+    z-index: 999;
+}
+
+/* Engagement Table */
+.engagement-table {
+    font-size: 0.85rem;
+}
+.engagement-table thead th {
+    background-color: var(--sidebar-bg);
+    border-bottom: 2px solid var(--border-color);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    padding: 0.5rem;
+}
+.engagement-table tbody td {
+    padding: 0.5rem;
+    border-bottom: 1px solid #eee;
+}
+.engagement-table tbody tr:hover {
+    background-color: var(--hover-bg);
+}
+
+.cursor-pointer { cursor: pointer; }
+
+/* Binder Workspace - Split Pane */
+.binder-workspace {
+    height: calc(100vh - 70px);
+    display: flex;
+    flex-direction: column;
+}
+.binder-toolbar {
+    background: white;
+    border-bottom: 1px solid var(--border-color);
+    padding: 8px 16px;
+}
+.binder-split {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Folder Panel (Left) */
+.folder-panel {
+    width: 280px;
+    min-width: 250px;
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid var(--border-color);
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+.folder-panel-header {
+    padding: 10px 12px 6px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Folder Tree */
+.folder-tree {
+    padding: 4px 0;
+}
+.tree-root {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.tree-children {
+    list-style: none;
+    padding-left: 20px;
+    margin: 0;
+}
+.tree-node {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    border-left: 3px solid transparent;
+    transition: background-color 0.15s;
+}
+.tree-node:hover {
+    background-color: var(--hover-bg);
+}
+.tree-item.active > .tree-node {
+    background-color: #d6e4f0;
+    border-left-color: var(--primary);
+    font-weight: 600;
+}
+.tree-toggle {
+    cursor: pointer;
+    font-size: 0.7rem;
+    width: 16px;
+    text-align: center;
+    transition: transform 0.2s;
+}
+.tree-toggle.collapsed {
+    transform: rotate(-90deg);
+}
+.tree-spacer {
+    width: 16px;
+    text-align: center;
+    font-size: 0.7rem;
+}
+.tree-label {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.tree-count {
+    font-size: 0.7rem;
+    padding: 1px 5px;
+}
+.recycle-bin {
+    margin-top: 8px;
+    border-top: 1px solid var(--border-color);
+    padding-top: 4px;
+}
+.recycle-bin.active {
+    background-color: #fde8e8;
+    border-left-color: #dc3545;
+}
+
+/* Document Panel (Right) */
+.document-panel {
+    flex: 1;
+    overflow-y: auto;
+    background: white;
+}
+.document-panel-header {
+    padding: 10px 16px;
+    background-color: #fafbfc;
+    border-bottom: 1px solid var(--border-color);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* Status & Type Badges */
+.bg-status-active { background-color: #10b981 !important; }
+.bg-status-archived { background-color: #6b7280 !important; }
+.bg-status-template { background-color: #8b5cf6 !important; }
+
+.bg-type-audit { background-color: #2563a0 !important; }
+.bg-type-tax { background-color: #059669 !important; }
+.bg-type-review { background-color: #d97706 !important; }
+.bg-type-compilation { background-color: #7c3aed !important; }
+.bg-type-other { background-color: #6b7280 !important; }
+
+/* Document icons by type */
+.doc-icon-pdf { color: #dc3545; }
+.doc-icon-xlsx, .doc-icon-xls { color: #198754; }
+.doc-icon-docx, .doc-icon-doc { color: #0d6efd; }
+.doc-icon-pptx, .doc-icon-ppt { color: #fd7e14; }
+
+/* Note items */
+.note-item {
+    border-left: 3px solid #ffc107;
+}
+.note-item.bg-light {
+    border-left-color: #ccc;
+}
+
+/* Cards */
+.card {
+    border: 1px solid var(--border-color);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.card-header {
+    background-color: #fafbfc;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Alerts */
+.alert {
+    font-size: 0.85rem;
+}
+
+/* Login card */
+.card-header.bg-primary-dark {
+    background-color: var(--primary-dark) !important;
+}
